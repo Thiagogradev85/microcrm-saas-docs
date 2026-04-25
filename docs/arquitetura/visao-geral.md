@@ -38,19 +38,19 @@ builder.HasQueryFilter(x => x.TenantId == _tenantContext.CurrentTenantId);
 
 Nenhuma query que toca tabela tenant-owned passa sem esse filtro.
 
-## Comunicação entre módulos — RabbitMQ + MassTransit
+## Comunicação entre módulos — RabbitMQ.Client direto
 
-**Stack de mensageria:** RabbitMQ (hospedado no CloudAMQP, free tier 1M msgs/mês) com **MassTransit 8.x** como abstração.
+**Stack de mensageria:** RabbitMQ (hospedado no CloudAMQP, free tier 1M msgs/mês) com **RabbitMQ.Client** oficial — sem camada de abstração (MassTransit foi descartado).
 
 ```
-Módulo A  →  publica Domain Event no RabbitMQ (via MassTransit)
+Módulo A  →  publica Domain Event no RabbitMQ (RabbitMQ.Client direto)
                           ↓
-Módulo B  →  consome o evento via MassTransit Consumer
+Módulo B  →  consome o evento via consumer próprio (ack/nack manual)
 ```
 
-MassTransit foi escolhido no lugar de usar RabbitMQ direto porque:
-- Abstrai o broker (pode trocar por Azure Service Bus ou SQS no futuro sem mudar o código)
-- Já oferece suporte nativo a retries, sagas e idempotência
-- Integra com MediatR sem conflito
+Por que RabbitMQ.Client direto e não MassTransit:
+- Objetivo é aprender RabbitMQ de verdade: exchanges, queues, bindings, routing keys, ack/nack, dead-letter queues
+- MassTransit esconde toda essa camada atrás de uma API de alto nível
+- O `IEventBus` no SharedKernel protege a decisão futura — se na Fase 2 o Saga ficar pesado demais, troca só a implementação sem mexer no domínio
 
 Nunca: `moduloA.Service.FazAlgo()` chamado de dentro do módulo B.
